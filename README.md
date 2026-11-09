@@ -2,7 +2,7 @@
 
 ![tests](https://github.com/badaruddin-arete/cermin-algoritma/actions/workflows/tests.yml/badge.svg)
 
-> Status: tahap awal. Baru generator data fiktif dan pengujiannya. Skema bobot umpan, metrik paparan, dan grafik menyusul.
+> Status: dalam pengerjaan. Sudah ada generator data, tujuh skema umpan, dan metrik paparan. Grafik perbandingan menyusul.
 
 ## Gagasan
 
@@ -31,6 +31,41 @@ Warung Kabar (fiktif), seed 2026
   baru      pembuat 20, kiriman  261, rerata pengikut   3.7
 ```
 
+## Skema umpan yang dibandingkan
+
+Untuk tiap pengguna, umpan berisi 20 kiriman teratas menurut skema. Umpan hanya melihat sinyal, tidak pernah melihat mutu laten.
+
+| Skema | Cara menimbang |
+|---|---|
+| `acak` | Urutan acak. Pembanding: apa yang terjadi bila umpan tidak memihak. |
+| `kronologis` | Yang terbaru lebih dulu. |
+| `suka` | Jumlah suka mutlak. |
+| `suka_rasio` | Suka per penonton awal (dengan penghalus). |
+| `waktu_tonton` | Total detik tonton. |
+| `kesamaan` | Kecocokan topik dengan minat pengguna saja. |
+| `campuran` | 0,4 kesamaan + 0,3 suka (skala log) + 0,3 kebaruan. |
+
+## Hasil percobaan (seed 2026)
+
+Porsi tayangan per kelompok pembuat. Sebagai patokan, porsi kiriman: besar 22,4%, menengah 51,5%, baru 26,1%.
+
+| Skema | Besar | Menengah | Baru | Gini antarpembuat | Pembuat tanpa tayangan (dari 40) |
+|---|---:|---:|---:|---:|---:|
+| acak | 22,2% | 52,3% | 25,5% | 0,31 | 0 |
+| kronologis | 20,0% | 55,0% | 25,0% | 0,72 | 26 |
+| suka | 100,0% | 0,0% | 0,0% | 0,92 | 35 |
+| suka_rasio | 35,0% | 60,0% | 5,0% | 0,70 | 25 |
+| waktu_tonton | 100,0% | 0,0% | 0,0% | 0,91 | 35 |
+| kesamaan | 22,2% | 57,4% | 20,4% | 0,45 | 6 |
+| campuran | 71,1% | 28,9% | 0,0% | 0,79 | 21 |
+
+Yang dapat dikatakan dari tabel ini, dan yang tidak:
+
+- Mutu kiriman setara di ketiga kelompok, tetapi skema berbasis hitungan mutlak (`suka`, `waktu_tonton`) memberi nyaris seluruh tayangan ke kelompok besar. Pada seed 1, 2, dan 3 pembuat baru tetap mendapat 0% di kedua skema itu (diuji otomatis).
+- Mengganti hitungan mutlak menjadi per penonton (`suka_rasio`) menurunkan ketimpangan, tetapi tidak menghapusnya. Pada seed 2026 pembuat baru naik ke 5%, pada seed 2 tetap 0%.
+- **Hasil ini sebagian besar tertanam dalam asumsi model**: penonton awal dibuat sebanding dengan jumlah pengikut. Karena itu tabel menunjukkan *bagaimana* sebuah rumus meneruskan keunggulan awal, bukan *seberapa besar* hal itu terjadi di platform nyata.
+- Skema yang sama untuk semua pengguna (`kronologis`, `suka`, `waktu_tonton`) menampilkan 20 kiriman yang itu-itu saja. Sebagian ketimpangannya berasal dari pemotongan "20 teratas", bukan hanya dari bobotnya.
+
 ## Keputusan desain
 
 | Keputusan | Alasan |
@@ -39,21 +74,32 @@ Warung Kabar (fiktif), seed 2026
 | Mutu laten tidak terlihat oleh umpan | Platform nyata juga hanya melihat sinyal (tonton, *like*), bukan mutu itu sendiri. |
 | Pembuat besar lebih banyak diikuti dan lebih aktif | Ketimpangan awal ini sengaja dibuat, supaya terlihat apakah sebuah skema memperbesar atau meredamnya. |
 | *Seed* tetap dan hanya pustaka standar `random` | Siapa pun dapat menjalankan ulang dan mendapat angka yang sama. |
+| Penonton awal sebanding dengan pengikut, suka bergantung pada mutu | Mewakili dua hal yang masuk akal: kiriman bermutu lebih disukai, dan pembuat berpengikut banyak lebih dulu dilihat. Asumsi ini menentukan hasil dan ditulis terang. |
+| Ada skema `acak` sebagai pembanding | Tanpa patokan "tidak memihak", angka tiap skema sulit ditafsirkan. |
+| Dua versi skema suka: mutlak dan per penonton | Memperlihatkan bahwa satu keputusan kecil dalam rumus mengubah siapa yang tampil. |
+| Metrik: porsi tayangan per kelompok dan Gini antarpembuat | Porsi mudah dibaca; Gini menangkap ketimpangan di dalam kelompok juga. |
 | Data seluruhnya fiktif | Tidak ada data pribadi, dan tidak ada klaim tentang platform tertentu. |
 
 ## Keterbatasan
 
 - Data fiktif hanya memperlihatkan **mekanisme**. Hasilnya tidak membuktikan bagaimana platform nyata berperilaku.
 - Angka-angka dasar (jumlah pembuat, peluang diikuti, bobot keaktifan) adalah pilihan penyusun, bukan hasil pengukuran. Mengubahnya dapat mengubah hasil.
-- Belum ada skema bobot dan metrik paparan pada tahap ini.
+- Satu putaran saja: tidak ada umpan balik (kiriman yang tampil lalu makin banyak disukai). Efek penguatan berulang belum dimodelkan.
+- Pengguna melihat 20 kiriman tanpa memperhitungkan posisi; di platform nyata posisi atas jauh lebih sering dilihat.
+- Sinyal awal adalah buatan model, bukan perilaku pengguna sungguhan; angka ambang (mis. 0,3 peluang suka) dipilih penyusun.
+- Hasil pada satu seed bisa berbeda; hanya temuan yang diuji pada beberapa seed yang diklaim di atas.
 
 ## Menjalankan
 
 ```bash
 pip install -r requirements.txt
+pip install -e .
 python -m pytest
-PYTHONPATH=src python -m cermin.data
+python -m cermin.data       # ringkasan data fiktif
+python -m cermin.simulasi   # tabel perbandingan skema
 ```
+
+46 uji otomatis mencakup generator data (determinisme, sebaran, relasi), metrik (Gini dengan hitungan tangan dan kasus batas), skema umpan, dan temuan utama pada beberapa seed.
 
 ## Transparansi bantuan AI
 
