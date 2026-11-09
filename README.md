@@ -2,7 +2,7 @@
 
 ![tests](https://github.com/badaruddin-arete/cermin-algoritma/actions/workflows/tests.yml/badge.svg)
 
-> Status: dalam pengerjaan. Sudah ada generator data, tujuh skema umpan, dan metrik paparan. Grafik perbandingan menyusul.
+> Status: percobaan utama selesai (satu putaran dan lima putaran umpan balik). Karya ini boleh disempurnakan seiring waktu; batasnya ditulis di bagian Keterbatasan.
 
 ## Gagasan
 
@@ -59,12 +59,27 @@ Porsi tayangan per kelompok pembuat. Sebagai patokan, porsi kiriman: besar 22,4%
 | kesamaan | 22,2% | 57,4% | 20,4% | 0,45 | 6 |
 | campuran | 71,1% | 28,9% | 0,0% | 0,79 | 21 |
 
+![Porsi tayangan per kelompok pembuat untuk tiap skema](docs/porsi-tayangan.png)
+
 Yang dapat dikatakan dari tabel ini, dan yang tidak:
 
 - Mutu kiriman setara di ketiga kelompok, tetapi skema berbasis hitungan mutlak (`suka`, `waktu_tonton`) memberi nyaris seluruh tayangan ke kelompok besar. Pada seed 1, 2, dan 3 pembuat baru tetap mendapat 0% di kedua skema itu (diuji otomatis).
 - Mengganti hitungan mutlak menjadi per penonton (`suka_rasio`) menurunkan ketimpangan, tetapi tidak menghapusnya. Pada seed 2026 pembuat baru naik ke 5%, pada seed 2 tetap 0%.
 - **Hasil ini sebagian besar tertanam dalam asumsi model**: penonton awal dibuat sebanding dengan jumlah pengikut. Karena itu tabel menunjukkan *bagaimana* sebuah rumus meneruskan keunggulan awal, bukan *seberapa besar* hal itu terjadi di platform nyata.
 - Skema yang sama untuk semua pengguna (`kronologis`, `suka`, `waktu_tonton`) menampilkan 20 kiriman yang itu-itu saja. Sebagian ketimpangannya berasal dari pemotongan "20 teratas", bukan hanya dari bobotnya.
+
+## Bila umpan balik diulang
+
+Satu putaran hanya memotret. Di platform, tayangan menghasilkan suka, dan suka menentukan tayangan berikutnya. `jalankan_berulang` meniru itu selama lima putaran: tiap tayangan menambah penonton, dan dengan peluang yang hanya bergantung pada mutu laten menambah suka dan waktu tonton, lalu umpan disusun ulang.
+
+![Indeks Gini antarpembuat dari putaran ke putaran](docs/gini-per-putaran.png)
+
+Yang terlihat, dengan batasnya:
+
+- Skema yang tidak memakai sinyal keterlibatan (`acak`, `kronologis`, `kesamaan`) tidak berubah sama sekali antarputaran. Garisnya datar karena memang tidak ada yang diumpankan kembali.
+- `suka` dan `waktu_tonton` sudah memberi semua tayangan kepada kiriman yang sama sejak putaran pertama, jadi umpan balik tidak mengubah apa pun. Kiriman yang tidak pernah tampil tidak pernah mendapat kesempatan membuktikan mutunya. (Kedua garis hampir berimpit di grafik.)
+- `suka_rasio` bergerak tidak beraturan (Gini 0,70 sampai 0,87) dan `campuran` perlahan turun (0,79 ke 0,73). Dengan satu dataset dan satu seed untuk umpan balik, saya **tidak** menyimpulkan arah umum dari gerakan ini.
+- Jadi percobaan ini tidak memperlihatkan "orang kaya makin kaya" secara dinamis. Ketimpangan di sini sudah ada pada putaran pertama karena asumsi sinyal awal; yang diperlihatkan umpan balik hanyalah bahwa ia tidak memperbaikinya.
 
 ## Keputusan desain
 
@@ -84,7 +99,7 @@ Yang dapat dikatakan dari tabel ini, dan yang tidak:
 
 - Data fiktif hanya memperlihatkan **mekanisme**. Hasilnya tidak membuktikan bagaimana platform nyata berperilaku.
 - Angka-angka dasar (jumlah pembuat, peluang diikuti, bobot keaktifan) adalah pilihan penyusun, bukan hasil pengukuran. Mengubahnya dapat mengubah hasil.
-- Satu putaran saja: tidak ada umpan balik (kiriman yang tampil lalu makin banyak disukai). Efek penguatan berulang belum dimodelkan.
+- Umpan balik hanya lima putaran dan satu rangkaian acak. Pengguna, kiriman, dan pengikut tetap; pembuat tidak belajar, berhenti, atau menyesuaikan diri.
 - Pengguna melihat 20 kiriman tanpa memperhitungkan posisi; di platform nyata posisi atas jauh lebih sering dilihat.
 - Sinyal awal adalah buatan model, bukan perilaku pengguna sungguhan; angka ambang (mis. 0,3 peluang suka) dipilih penyusun.
 - Hasil pada satu seed bisa berbeda; hanya temuan yang diuji pada beberapa seed yang diklaim di atas.
@@ -97,9 +112,10 @@ pip install -e .
 python -m pytest
 python -m cermin.data       # ringkasan data fiktif
 python -m cermin.simulasi   # tabel perbandingan skema
+python -m cermin.grafik     # menulis ulang grafik di docs/
 ```
 
-46 uji otomatis mencakup generator data (determinisme, sebaran, relasi), metrik (Gini dengan hitungan tangan dan kasus batas), skema umpan, dan temuan utama pada beberapa seed.
+53 uji otomatis mencakup generator data (determinisme, sebaran, relasi), metrik (Gini dengan hitungan tangan dan kasus batas), skema umpan, umpan balik berulang, pembuatan grafik, dan temuan utama pada beberapa seed.
 
 ## Transparansi bantuan AI
 
