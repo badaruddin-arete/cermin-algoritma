@@ -99,7 +99,7 @@ Yang terlihat, dengan batasnya:
 
 - Data fiktif hanya memperlihatkan **mekanisme**. Hasilnya tidak membuktikan bagaimana platform nyata berperilaku.
 - Angka-angka dasar (jumlah pembuat, peluang diikuti, bobot keaktifan) adalah pilihan penyusun, bukan hasil pengukuran. Mengubahnya dapat mengubah hasil.
-- Umpan balik hanya lima putaran dan satu rangkaian acak. Pengguna, kiriman, dan pengikut tetap; pembuat tidak belajar, berhenti, atau menyesuaikan diri.
+- Umpan balik hanya lima putaran dan satu deret angka acak. Pengguna, kiriman, dan pengikut tetap; pembuat tidak belajar, berhenti, atau menyesuaikan diri.
 - Pengguna melihat 20 kiriman tanpa memperhitungkan posisi; di platform nyata posisi atas jauh lebih sering dilihat.
 - Sinyal awal adalah buatan model, bukan perilaku pengguna sungguhan; angka ambang (mis. 0,3 peluang suka) dipilih penyusun.
 - Hasil pada satu seed bisa berbeda; hanya temuan yang diuji pada beberapa seed yang diklaim di atas.
