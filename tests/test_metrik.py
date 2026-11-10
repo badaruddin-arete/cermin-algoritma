@@ -1,7 +1,9 @@
 import pytest
 
 from cermin.data import buat_dataset
-from cermin.metrik import gini, tayangan_per_pembuat, ukur
+import math
+
+from cermin.metrik import gini, tayangan_berbobot_per_pembuat, tayangan_per_pembuat, ukur
 
 
 def test_gini_sama_rata_nol():
@@ -50,3 +52,21 @@ def test_ukur_porsi_berjumlah_satu():
     assert sum(p.porsi_tayangan.values()) == pytest.approx(1.0)
     assert sum(p.porsi_kiriman.values()) == pytest.approx(1.0)
     assert 0.0 <= p.gini_pembuat < 1.0
+
+
+def test_bobot_posisi_menurun():
+    ds = buat_dataset(seed=3, jumlah_pengguna=2, jumlah_kiriman=30)
+    a, b = ds.kiriman[0], ds.kiriman[1]
+    hitung = tayangan_berbobot_per_pembuat(ds, {"u": [a.id, b.id]})
+    if a.pembuat_id == b.pembuat_id:
+        assert hitung[a.pembuat_id] == pytest.approx(1.0 + 1 / math.log2(3))
+    else:
+        assert hitung[a.pembuat_id] == pytest.approx(1.0)
+        assert hitung[b.pembuat_id] == pytest.approx(1 / math.log2(3))
+        assert hitung[a.pembuat_id] > hitung[b.pembuat_id]
+
+
+def test_porsi_berbobot_berjumlah_satu():
+    ds = buat_dataset(seed=3, jumlah_pengguna=10, jumlah_kiriman=100)
+    umpan = {u.id: [k.id for k in ds.kiriman[:5]] for u in ds.pengguna}
+    assert sum(ukur(ds, umpan).porsi_berbobot.values()) == pytest.approx(1.0)
