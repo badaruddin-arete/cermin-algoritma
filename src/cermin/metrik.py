@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections import Counter
 from dataclasses import dataclass
 
@@ -33,6 +34,22 @@ def tayangan_per_pembuat(ds: Dataset, umpan: dict[str, list[str]]) -> Counter[st
     return hitung
 
 
+def tayangan_berbobot_per_pembuat(
+    ds: Dataset, umpan: dict[str, list[str]]
+) -> dict[str, float]:
+    """Tayangan dengan bobot posisi 1 / log2(posisi + 1), posisi mulai dari 1.
+
+    Kiriman di posisi atas lebih sering dilihat; bobot ini hanya pendekatan,
+    bukan data perilaku nyata.
+    """
+    pembuat_kiriman = {k.id: k.pembuat_id for k in ds.kiriman}
+    hitung = {p.id: 0.0 for p in ds.pembuat}
+    for daftar in umpan.values():
+        for posisi, id_kiriman in enumerate(daftar, start=1):
+            hitung[pembuat_kiriman[id_kiriman]] += 1.0 / math.log2(posisi + 1)
+    return hitung
+
+
 @dataclass(frozen=True)
 class Paparan:
     porsi_tayangan: dict[str, float]  # per kelompok, jumlahnya 1
@@ -40,6 +57,7 @@ class Paparan:
     rasio: dict[str, float]  # porsi tayangan / porsi kiriman
     gini_pembuat: float  # Gini tayangan antarpembuat
     pembuat_tak_tampil: int  # pembuat dengan nol tayangan
+    porsi_berbobot: dict[str, float]  # porsi tayangan berbobot posisi, per kelompok
 
 
 def ukur(ds: Dataset, umpan: dict[str, list[str]]) -> Paparan:
@@ -53,6 +71,12 @@ def ukur(ds: Dataset, umpan: dict[str, list[str]]) -> Paparan:
     for k in ds.kiriman:
         kiriman[kelompok_pembuat[k.pembuat_id]] += 1
 
+    berbobot = tayangan_berbobot_per_pembuat(ds, umpan)
+    berbobot_k = {k: 0.0 for k in KELOMPOK}
+    for id_pembuat, n in berbobot.items():
+        berbobot_k[kelompok_pembuat[id_pembuat]] += n
+    total_berbobot = sum(berbobot_k.values())
+
     total_tayangan = sum(tayangan.values())
     total_kiriman = sum(kiriman.values())
     porsi_t = {k: tayangan[k] / total_tayangan for k in KELOMPOK}
@@ -63,4 +87,5 @@ def ukur(ds: Dataset, umpan: dict[str, list[str]]) -> Paparan:
         rasio={k: porsi_t[k] / porsi_k[k] for k in KELOMPOK},
         gini_pembuat=gini([float(v) for v in per_pembuat.values()]),
         pembuat_tak_tampil=sum(1 for v in per_pembuat.values() if v == 0),
+        porsi_berbobot={k: berbobot_k[k] / total_berbobot for k in KELOMPOK},
     )
