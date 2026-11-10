@@ -38,21 +38,39 @@ class Konteks:
     seed: int
 
 
-def hitung_sinyal(ds: Dataset, seed: int | None = None) -> dict[str, Sinyal]:
-    """Sinyal awal tiap kiriman. Deterministik untuk seed yang sama."""
+DASAR_BAWAAN = 1  # penonton awal minimum tiap kiriman
+KOEF_BAWAAN = 0.5  # penonton awal tambahan per pengikut pembuat
+
+
+def hitung_sinyal(
+    ds: Dataset,
+    seed: int | None = None,
+    dasar: int = DASAR_BAWAAN,
+    koef: float = KOEF_BAWAAN,
+) -> dict[str, Sinyal]:
+    """Sinyal awal tiap kiriman. Deterministik untuk seed yang sama.
+
+    Penonton awal = ``dasar`` + ``koef`` x pengikut pembuat. ``koef = 0`` berarti
+    semua kiriman mulai dengan penonton yang sama, apa pun pembuatnya.
+    """
     rng = random.Random((ds.seed if seed is None else seed) + 1)
     pengikut = ds.pengikut()
     sinyal: dict[str, Sinyal] = {}
     for k in ds.kiriman:
-        dilihat = 1 + round(0.5 * pengikut[k.pembuat_id])
+        dilihat = dasar + round(koef * pengikut[k.pembuat_id])
         suka = sum(rng.random() < SUKA_PER_DILIHAT * k.mutu for _ in range(dilihat))
         porsi = SEMI_RUMUS_TONTON[0] + SEMI_RUMUS_TONTON[1] * k.mutu
         sinyal[k.id] = Sinyal(dilihat, suka, dilihat * porsi * k.durasi_detik)
     return sinyal
 
 
-def buat_konteks(ds: Dataset, seed: int | None = None) -> Konteks:
-    sinyal = hitung_sinyal(ds, seed)
+def buat_konteks(
+    ds: Dataset,
+    seed: int | None = None,
+    dasar: int = DASAR_BAWAAN,
+    koef: float = KOEF_BAWAAN,
+) -> Konteks:
+    sinyal = hitung_sinyal(ds, seed, dasar, koef)
     return Konteks(
         ds=ds,
         sinyal=sinyal,
@@ -118,6 +136,10 @@ SKEMA: dict[str, Skema] = {
 }
 
 
+# Skema yang skornya tidak bergantung pada pengguna: urutan cukup dihitung sekali.
+SKEMA_GLOBAL = frozenset({"kronologis", "suka", "suka_rasio", "waktu_tonton"})
+
+
 def susun_umpan(
     c: Konteks, skema: str, jumlah: int = JUMLAH_UMPAN
 ) -> dict[str, list[str]]:
@@ -127,6 +149,11 @@ def susun_umpan(
     """
     fungsi = SKEMA[skema]
     umpan: dict[str, list[str]] = {}
+    if skema in SKEMA_GLOBAL:
+        u0 = c.ds.pengguna[0]
+        urut = sorted(c.ds.kiriman, key=lambda k: (-fungsi(c, u0, k), k.id))
+        teratas = [k.id for k in urut[:jumlah]]
+        return {u.id: list(teratas) for u in c.ds.pengguna}
     for u in c.ds.pengguna:
         berurut = sorted(
             c.ds.kiriman, key=lambda k: (-fungsi(c, u, k), k.id)

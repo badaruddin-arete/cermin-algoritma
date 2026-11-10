@@ -8,6 +8,8 @@ from dataclasses import replace
 from .data import KELOMPOK, Dataset, buat_dataset
 from .metrik import Paparan, ukur
 from .umpan import (
+    DASAR_BAWAAN,
+    KOEF_BAWAAN,
     SEMI_RUMUS_TONTON,
     SKEMA,
     SUKA_PER_DILIHAT,
@@ -20,8 +22,10 @@ from .umpan import (
 PUTARAN_BAWAAN = 5
 
 
-def jalankan(ds: Dataset) -> dict[str, Paparan]:
-    konteks = buat_konteks(ds)
+def jalankan(
+    ds: Dataset, dasar: int = DASAR_BAWAAN, koef: float = KOEF_BAWAAN
+) -> dict[str, Paparan]:
+    konteks = buat_konteks(ds, dasar=dasar, koef=koef)
     return {nama: ukur(ds, susun_umpan(konteks, nama)) for nama in SKEMA}
 
 
